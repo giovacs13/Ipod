@@ -33,7 +33,7 @@ body{
 }
 .ipod{
   --avail:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
-  --w:min(96vw, 620px, calc(var(--avail) / 1.66));
+  --w:min(96vw, var(--maxw,620px), calc(var(--avail) / var(--ar,1.66)));
   --body-bg:linear-gradient(180deg,#ffffff 0%,#f3f4f6 20%,#e6e8ec 60%,#d6d9df 100%);
   --body-edge:#a9aeb7; --rim:rgba(255,255,255,.95); --hi:rgba(255,255,255,.95); --lo:rgba(60,70,90,.24);
   --sheen:linear-gradient(112deg,rgba(255,255,255,0) 8%,rgba(255,255,255,.65) 24%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 62%,rgba(255,255,255,.35) 74%,rgba(255,255,255,0) 86%),linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0) 28%);
@@ -41,7 +41,7 @@ body{
   --center-hi:#ffffff; --center-a:#f7f8fa; --center-b:#dfe1e6;
   --wheel-ink:#8b9099; --labsh:0 1px 0 rgba(255,255,255,.9);
   position:relative;
-  width:var(--w);height:min(var(--avail), calc(var(--w) * 2.05));
+  width:var(--w);height:min(var(--avail), calc(var(--w) * var(--stretch,2.05)));
   border-radius:calc(var(--w) * .085);
   background:var(--body-bg);
   box-shadow:
@@ -56,7 +56,7 @@ body{
 }
 .ipod::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:var(--sheen)}
 .ipod>*{position:relative;z-index:1}
-.ipod[data-device="black"]{
+.ipod[data-skin="ipod-black"]{
   --body-bg:linear-gradient(180deg,#46474d 0%,#2b2c30 14%,#18191c 55%,#0c0d0f 100%);
   --body-edge:#000; --rim:rgba(255,255,255,.22); --hi:rgba(255,255,255,.32); --lo:rgba(0,0,0,.6);
   --sheen:linear-gradient(112deg,rgba(255,255,255,0) 8%,rgba(255,255,255,.20) 24%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 62%,rgba(255,255,255,.10) 74%,rgba(255,255,255,0) 86%),linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 26%);
@@ -76,7 +76,7 @@ body{
 .lcd{
   width:100%;height:100%;border-radius:calc(var(--w) * .014);overflow:hidden;
   background:var(--lcd);color:var(--lcd-ink);position:relative;
-  display:flex;flex-direction:column;font-size:calc(var(--w) * .047);
+  display:flex;flex-direction:column;font-size:var(--lcdfs,calc(var(--w) * .047));
   box-shadow:0 0 12px rgba(0,0,0,.35) inset;
 }
 .bar{
@@ -92,7 +92,7 @@ body{
 .batt i{display:block;height:100%;width:78%;background:var(--lcd-ink)}
 .list{flex:1;overflow:hidden;position:relative}
 .row{
-  height:calc(100% / 7);display:flex;align-items:center;justify-content:space-between;
+  height:calc(100% / var(--rows,7));display:flex;align-items:center;justify-content:space-between;
   padding:0 .6em;white-space:nowrap;
 }
 .row span:first-child{overflow:hidden;text-overflow:ellipsis}
@@ -160,11 +160,108 @@ body{
 .sbox{width:100%;font:inherit;padding:.5em .6em;border:1px solid var(--lcd-ink);border-radius:4px;background:#fff;color:var(--lcd-ink);
   user-select:text;-webkit-user-select:text;touch-action:auto;outline:none}
 .sbox:focus{box-shadow:0 0 0 2px var(--lcd-hi)}
+
+/* ================== Skins ================== */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pump{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.pad{display:none}
+.rot{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 8px);
+  z-index:20;padding:6px 14px;border-radius:999px;background:rgba(0,0,0,.6);color:#fff;font:600 13px/1.2 "Helvetica Neue",Arial,sans-serif;pointer-events:none}
+@media (orientation:portrait){body[data-land="1"] .rot{display:block}}
+
+/* iPod Mini */
+.ipod[data-skin="mini-blue"],.ipod[data-skin="mini-pink"]{--ar:1.5;--stretch:1.72;--rim:rgba(255,255,255,.55);--hi:rgba(255,255,255,.6);
+  --sheen:linear-gradient(112deg,rgba(255,255,255,0) 8%,rgba(255,255,255,.45) 24%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 62%,rgba(255,255,255,.22) 74%,rgba(255,255,255,0) 86%),linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 28%)}
+.ipod[data-skin="mini-blue"]{--body-bg:repeating-linear-gradient(90deg,rgba(255,255,255,.10) 0 1px,rgba(0,0,0,.04) 1px 2px),linear-gradient(180deg,#c3dcf4 0%,#93bde6 30%,#6f9fd2 70%,#5a88bd 100%);--body-edge:#436a98;--lo:rgba(20,50,90,.4)}
+.ipod[data-skin="mini-pink"]{--body-bg:repeating-linear-gradient(90deg,rgba(255,255,255,.12) 0 1px,rgba(0,0,0,.04) 1px 2px),linear-gradient(180deg,#fbd3e1 0%,#f5a9c4 30%,#ec86ac 70%,#d96d96 100%);--body-edge:#a64a6e;--lo:rgba(110,30,60,.4)}
+
+/* Dispositivos con botones (casete, radiocasete, CD) */
+.ipod[data-input="pad"] .wheel{display:none}
+.ipod[data-input="pad"] .pad{display:contents}
+.ipod[data-input="pad"]{display:block;padding:0;height:calc(var(--w) * var(--ar));border-radius:calc(var(--w) * var(--rad,.04))}
+.ipod[data-input="pad"] .bezel{position:absolute;flex:none;min-height:0;max-height:none;padding:calc(var(--w) * .012);border-radius:calc(var(--w) * .02)}
+.ipod .d-cassette,.ipod .d-spk,.ipod .d-disc{display:none;position:absolute;pointer-events:none}
+.pad button{position:relative;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;min-width:0;min-height:0;overflow:hidden;
+  font:700 var(--bfs,calc(var(--w) * .02))/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:.03em;
+  color:var(--bk-ink);background:var(--bk-bg);border-radius:var(--bk-r);box-shadow:var(--bk-sh);-webkit-user-select:none;user-select:none}
+.pad button svg{width:calc(var(--bfs,calc(var(--w) * .02)) * 1.5);height:calc(var(--bfs,calc(var(--w) * .02)) * 1.5);fill:currentColor;pointer-events:none}
+.pad button:active{transform:translateY(1px);box-shadow:var(--bk-sh-p)}
+.pad button:focus-visible{outline:3px solid #2a6fb5;outline-offset:2px}
+.nav,.transport{position:absolute;display:grid;grid-auto-rows:minmax(0,1fr);gap:calc(var(--w) * .012);z-index:2}
+.nav{grid-template-columns:repeat(4,1fr)}
+.transport{grid-template-columns:repeat(5,1fr)}
+.ipod.playing .reel,.ipod.playing .d-disc,.ipod.playing .cone{animation-play-state:running}
+.reel,.d-disc,.cone{animation-play-state:paused}
+
+/* Casete portátil */
+.ipod[data-skin="cassette"]{--ar:.56;--maxw:940px;--rad:.045;--lcdfs:calc(var(--w) * .0215);
+  --body-bg:linear-gradient(180deg,#eef0f3 0%,#d5d9de 61%,#2c5ea3 61.5%,#234d8a 100%);
+  --body-edge:#7e8793;--rim:rgba(255,255,255,.7);--hi:rgba(255,255,255,.85);--lo:rgba(10,30,70,.4);
+  --sheen:linear-gradient(115deg,rgba(255,255,255,0) 10%,rgba(255,255,255,.45) 26%,rgba(255,255,255,0) 44%);
+  --bk-bg:linear-gradient(180deg,#f6f7f9,#c5cad1);--bk-ink:#37414f;--bk-r:calc(var(--w) * .008);
+  --bk-sh:0 calc(var(--w) * .004) 0 #6f7885,0 calc(var(--w) * .007) calc(var(--w) * .01) rgba(0,0,0,.45);
+  --bk-sh-p:0 0 0 #6f7885,inset 0 calc(var(--w) * .004) calc(var(--w) * .008) rgba(0,0,0,.35)}
+.ipod[data-skin="cassette"] .bezel{left:54%;top:8%;width:41%;height:46%}
+.ipod[data-skin="cassette"] .transport{left:5%;top:68%;width:52%;height:22%}
+.ipod[data-skin="cassette"] .nav{left:62%;top:64%;width:33%;height:28%;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
+.ipod[data-skin="cassette"] .d-cassette,.ipod[data-skin="boombox"] .d-cassette{display:block;overflow:hidden;border-radius:calc(var(--w) * .012);
+  background:linear-gradient(180deg,#1b1f26,#0b0d11);
+  box-shadow:inset 0 0 0 calc(var(--w) * .005) #8d949e,inset 0 calc(var(--w) * .01) calc(var(--w) * .02) rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.6)}
+.ipod[data-skin="cassette"] .d-cassette{left:5%;top:8%;width:44%;height:46%}
+.d-cassette .label{position:absolute;left:8%;right:8%;top:9%;height:27%;border-radius:2px;background:linear-gradient(180deg,#f2eee0,#d9d3bf)}
+.d-cassette .label::after{content:"CASETE \00B7 LADO A";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 calc(var(--w) * .014)/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:.12em;color:#6b6552}
+.d-cassette .reel{position:absolute;top:42%;height:42%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle closest-side,#0b0d11 0 20%,transparent 21%),conic-gradient(#ececef 0 12.5%,#2b2f36 0 25%,#ececef 0 37.5%,#2b2f36 0 50%,#ececef 0 62.5%,#2b2f36 0 75%,#ececef 0 87.5%,#2b2f36 0);
+  box-shadow:0 0 0 calc(var(--w) * .004) #5d636c;animation:spin 2.4s linear infinite}
+.d-cassette .reel.a{left:15%}
+.d-cassette .reel.b{right:15%}
+
+/* Radiocasete */
+.ipod[data-skin="boombox"]{--ar:.58;--maxw:940px;--rad:.05;--lcdfs:calc(var(--w) * .019);--bfs:calc(var(--w) * .017);
+  --body-bg:linear-gradient(180deg,#5b5e64 0%,#36383c 22%,#232427 100%);
+  --body-edge:#0b0b0c;--rim:rgba(255,255,255,.25);--hi:rgba(255,255,255,.3);--lo:rgba(0,0,0,.6);
+  --sheen:linear-gradient(115deg,rgba(255,255,255,0) 10%,rgba(255,255,255,.16) 26%,rgba(255,255,255,0) 44%);
+  --bk-bg:linear-gradient(180deg,#45474c,#1d1e21);--bk-ink:#dfe3ea;--bk-r:calc(var(--w) * .008);
+  --bk-sh:0 calc(var(--w) * .004) 0 #060607,0 calc(var(--w) * .007) calc(var(--w) * .01) rgba(0,0,0,.55);
+  --bk-sh-p:0 0 0 #060607,inset 0 calc(var(--w) * .004) calc(var(--w) * .008) rgba(0,0,0,.6)}
+.ipod[data-skin="boombox"] .bezel{left:30%;top:9%;width:40%;height:41%}
+.ipod[data-skin="boombox"] .d-cassette{left:35%;top:54%;width:30%;height:16%}
+.ipod[data-skin="boombox"] .d-cassette .label{display:none}
+.ipod[data-skin="boombox"] .d-cassette .reel{top:18%;height:64%}
+.ipod[data-skin="boombox"] .nav{left:30%;top:73%;width:40%;height:11%}
+.ipod[data-skin="boombox"] .transport{left:22%;top:86%;width:56%;height:10.5%}
+.ipod[data-skin="boombox"] .d-spk{display:block;top:14%;width:25%;height:70%;border-radius:calc(var(--w) * .014);
+  background:repeating-linear-gradient(0deg,#16171a 0 2px,#212226 2px 4px);
+  box-shadow:inset 0 0 0 calc(var(--w) * .006) #9aa0a8,inset 0 calc(var(--w) * .01) calc(var(--w) * .02) rgba(0,0,0,.8)}
+.d-spk.l{left:3%}
+.d-spk.r{left:72%}
+.d-spk::before{content:"";position:absolute;left:50%;top:13%;width:calc(var(--w) * .05);height:calc(var(--w) * .05);margin:calc(var(--w) * -.025) 0 0 calc(var(--w) * -.025);
+  border-radius:50%;background:radial-gradient(circle closest-side,#0e0f11 0 24%,#34373d 25% 44%,#14151a 45% 90%,#555 91%)}
+.d-spk .cone{position:absolute;left:50%;top:60%;width:calc(var(--w) * .19);height:calc(var(--w) * .19);margin:calc(var(--w) * -.095) 0 0 calc(var(--w) * -.095);
+  border-radius:50%;background:radial-gradient(circle closest-side,#0e0f11 0 16%,#2a2c30 17% 30%,#15161a 31% 62%,#3a3d43 63% 70%,#111 71% 92%,#6b7078 93%);
+  animation:pump .55s ease-in-out infinite}
+
+/* Reproductor de CD */
+.ipod[data-skin="cd"]{--ar:1.3;--maxw:480px;--rad:.12;--lcdfs:calc(var(--w) * .031);--bfs:calc(var(--w) * .032);
+  --body-bg:linear-gradient(150deg,#f5f6f9 0%,#d3d6dc 55%,#babec6 100%);
+  --body-edge:#8f96a1;--rim:rgba(255,255,255,.9);--hi:rgba(255,255,255,.95);--lo:rgba(40,50,70,.3);
+  --bk-bg:linear-gradient(180deg,#fafbfc,#cdd1d8);--bk-ink:#4a525e;--bk-r:999px;
+  --bk-sh:0 calc(var(--w) * .004) 0 #8c939e,0 calc(var(--w) * .008) calc(var(--w) * .012) rgba(0,0,0,.3);
+  --bk-sh-p:0 0 0 #8c939e,inset 0 calc(var(--w) * .006) calc(var(--w) * .01) rgba(0,0,0,.3)}
+.ipod[data-skin="cd"] .bezel{left:9%;top:5%;width:82%;height:28%}
+.ipod[data-skin="cd"] .nav{left:9%;top:77%;width:82%;height:8%}
+.ipod[data-skin="cd"] .transport{left:9%;top:87%;width:82%;height:9%}
+.ipod[data-skin="cd"] .d-disc{display:block;left:25%;top:36%;width:50%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle closest-side,#d3d6dc 0 9%,#8c9098 10% 12%,transparent 13%),
+    conic-gradient(#e8f0ff,#ffd9f0,#fff3c9,#d8ffe8,#e8f0ff,#d9d2ff,#ffe0d0,#e8f0ff);
+  box-shadow:0 0 0 calc(var(--w) * .01) #9aa0a9,0 calc(var(--w) * .02) calc(var(--w) * .04) rgba(0,0,0,.3);animation:spin 3s linear infinite}
+
+@media (prefers-reduced-motion:reduce){.reel,.d-disc,.cone{animation:none!important}}
 @media (prefers-reduced-motion:reduce){.vol,.toast{transition:none}}
 </style>
 </head>
 <body>
-<div class="ipod" id="ipod" data-device="white">
+<div class="ipod" id="ipod" data-skin="ipod-white" data-input="wheel">
   <div class="bezel">
     <div class="lcd">
       <div class="bar">
@@ -185,7 +282,29 @@ body{
     <div class="lab rgt"><svg viewBox="0 0 24 24"><path d="M18 5h3v14h-3zM3 5l13 7L3 19z"/></svg></div>
     <button class="center" id="center" aria-label="Seleccionar"></button>
   </div>
+
+  <div class="d-cassette"><i class="label"></i><i class="reel a"></i><i class="reel b"></i></div>
+  <div class="d-spk l"><i class="cone"></i></div>
+  <div class="d-spk r"><i class="cone"></i></div>
+  <div class="d-disc"></div>
+
+  <div class="pad">
+    <div class="nav">
+      <button data-act="up" aria-label="Subir"><svg viewBox="0 0 24 24"><path d="M12 6l9 11H3z"/></svg></button>
+      <button data-act="down" aria-label="Bajar"><svg viewBox="0 0 24 24"><path d="M12 18L3 7h18z"/></svg></button>
+      <button data-act="select" aria-label="Seleccionar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg></button>
+      <button data-act="menu" aria-label="Menú">MENU</button>
+    </div>
+    <div class="transport">
+      <button data-act="prev" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M3 5h3v14H3zM21 5v14L8 12z"/></svg></button>
+      <button data-act="play" aria-label="Reproducir o pausar"><svg viewBox="0 0 24 24"><path d="M3 4l9 8-9 8zM13 4h3v16h-3zM18 4h3v16h-3z"/></svg></button>
+      <button data-act="next" aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M18 5h3v14h-3zM3 5l13 7L3 19z"/></svg></button>
+      <button data-act="vdn" aria-label="Bajar volumen">&minus;</button>
+      <button data-act="vup" aria-label="Subir volumen">+</button>
+    </div>
+  </div>
 </div>
+<div class="rot" id="rot">Gira el teléfono &#8635; para verlo más grande</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
 <script>
@@ -310,13 +429,31 @@ async function clearAll(){
 
 /* ================== Estado ================== */
 const S = { stack:[], queue:[], qi:-1, playing:false, pos:0, vol:.7, theme:'white', armed:0, art:null };
-const ROWS = 7;
+let ROWS = 7;
+S.skin='ipod-white';
 try{
   const sv=JSON.parse(localStorage.getItem('ipod-prefs')||'{}');
-  if(sv.theme){ S.theme=sv.theme; $('ipod').dataset.device=sv.theme; }
+  S.skin = sv.skin || (sv.theme==='black'?'ipod-black':'ipod-white');
   if(typeof sv.vol==='number') S.vol=sv.vol;
 }catch(e){}
-const savePrefs=()=>{ try{ localStorage.setItem('ipod-prefs',JSON.stringify({theme:S.theme,vol:S.vol})); }catch(e){} };
+const savePrefs=()=>{ try{ localStorage.setItem('ipod-prefs',JSON.stringify({skin:S.skin,vol:S.vol})); }catch(e){} };
+
+/* ================== Skins (dispositivos retro) ================== */
+const SKINS=[
+  {id:'ipod-white', name:'iPod blanco',        rows:7},
+  {id:'ipod-black', name:'iPod negro',         rows:7},
+  {id:'mini-blue',  name:'iPod Mini azul',     rows:7},
+  {id:'mini-pink',  name:'iPod Mini rosa',     rows:7},
+  {id:'cassette',   name:'Casete portátil',    rows:5, pad:true, land:true},
+  {id:'boombox',    name:'Radiocasete',        rows:5, pad:true, land:true},
+  {id:'cd',         name:'Reproductor de CD',  rows:5, pad:true}
+];
+function applySkin(id){
+  const k=SKINS.find(x=>x.id===id)||SKINS[0], e=$('ipod');
+  S.skin=k.id; e.dataset.skin=k.id; e.dataset.input=k.pad?'pad':'wheel';
+  document.body.dataset.land=k.land?'1':'0';
+  ROWS=k.rows; e.style.setProperty('--rows',k.rows);
+}
 
 const fmt = s => { s=Math.max(0,s||0); return Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,'0'); };
 const cur = () => S.qi>=0 ? (TRK.get(S.queue[S.qi])||ONL.get(S.queue[S.qi])||null) : null;
@@ -353,8 +490,7 @@ const SCREENS = {
   album:n=>({title:n, items:trackItems(all().filter(t=>t.al===n).sort(byAlbum))}),
   settings:()=>({title:"Ajustes", items:[
     {label:"Importar música", value:TRK.size+" canc.", go:pick},
-    {label:"Color del iPod", value:S.theme==='white'?"Blanco":"Negro", go:()=>{
-        S.theme=S.theme==='white'?'black':'white'; $('ipod').dataset.device=S.theme; savePrefs(); render(); }},
+    {label:"Dispositivo", chev:1, go:()=>push('skins')},
     {label:"Borrar biblioteca", go:async()=>{
         if(Date.now()-S.armed<3000){ await clearAll(); S.stack=[S.stack[0]]; render(); toast("Biblioteca borrada"); }
         else { S.armed=Date.now(); toast("Pulsa otra vez para borrar"); } }},
@@ -372,6 +508,10 @@ const SCREENS = {
     {label:"En la biblioteca", go:()=>saveToLibrary()},
     {label:"Archivo en el teléfono", go:()=>saveToPhone()}
   ]}),
+  skins:()=>({title:"Dispositivo", items:SKINS.map(k=>({label:k.name, value:k.id===S.skin?'✓':'', go:()=>{
+      applySkin(k.id); savePrefs(); render();
+      if(k.land && innerHeight>innerWidth) toast('Gira el teléfono para verlo mejor',2800);
+    }}))}),
   np:()=>({title:"Reproduciendo", np:true})
 };
 
@@ -401,10 +541,14 @@ async function runOnline(kind,q){
     let tracks=[], title='';
     if(kind==='radio-pop'){
       const j=await rb('/json/stations/search?language=spanish&order=clickcount&reverse=true&hidebroken=true&limit=150');
-      tracks=j.filter(httpsOK).slice(0,40).map(radioTrack); title='Radio populares';
+      if(!j.length){ toast('Sin resultados'); return; }
+      tracks=j.filter(s=>httpsOK(s)&&s.hls!==1).slice(0,40).map(radioTrack); title='Radio populares';
+      if(!tracks.length){ toast('Ninguna emisora compatible',2600); return; }
     } else if(kind==='radio'){
       const j=await rb('/json/stations/search?name='+encodeURIComponent(q)+'&order=clickcount&reverse=true&hidebroken=true&limit=150');
-      tracks=j.filter(httpsOK).slice(0,40).map(radioTrack); title=q;
+      if(!j.length){ toast('Sin resultados'); return; }
+      tracks=j.filter(s=>httpsOK(s)&&s.hls!==1).slice(0,40).map(radioTrack); title=q;
+      if(!tracks.length){ toast('Ninguna emisora compatible (usan http)',2600); return; }
     } else if(kind==='audius-trend'){
       const j=await getJSON(`${AU}/tracks/trending?limit=30&app_name=ipod`);
       tracks=(j.data||[]).filter(t=>t.is_streamable!==false).map(audiusTrack); title='Audius tendencias';
@@ -472,6 +616,7 @@ function scr(){ return S.stack[S.stack.length-1]; }
 function render(){
   const f=scr(), def=SCREENS[f.key](f.arg);
   titleEl.textContent=def.title;
+  $('ipod').classList.toggle('playing',!!S.playing);
   $('icoPlay').innerHTML = S.playing
     ? '<svg viewBox="0 0 24 24" width="12" height="12"><path d="M6 4l14 8-14 8z" fill="currentColor"/></svg>'
     : (cur()?'<svg viewBox="0 0 24 24" width="12" height="12"><path d="M5 4h5v16H5zM14 4h5v16h-5z" fill="currentColor"/></svg>':'');
@@ -510,7 +655,14 @@ au.addEventListener('timeupdate',()=>{ S.pos=au.currentTime; if(scr()&&scr().key
 au.addEventListener('loadedmetadata',()=>{ if(scr()&&scr().key==='np') updateProg(); });
 au.addEventListener('play',()=>{ S.playing=true; render(); });
 au.addEventListener('pause',()=>{ if(!au.ended){ S.playing=false; render(); } });
-au.addEventListener('error',()=>{ if(au.error&&au.getAttribute('src')) toast('No se pudo reproducir',2200); });
+let failN=0, liveT=null;
+function liveFail(){
+  const t=cur();
+  if(t&&t.live&&failN<5&&S.qi<S.queue.length-1){ failN++; toast('Emisora sin señal, probando otra…',2400); skip(1); }
+  else toast(t&&t.live?'Emisora sin señal':'No se pudo reproducir',2600);
+}
+au.addEventListener('error',()=>{ if(au.error&&au.getAttribute('src')) liveFail(); });
+au.addEventListener('playing',()=>{ failN=0; clearTimeout(liveT); });
 au.addEventListener('ended',()=>{
   if(S.qi<S.queue.length-1) skip(1); else { S.playing=false; S.pos=0; render(); }
 });
@@ -527,8 +679,9 @@ async function loadCurrent(){
     curUrl=URL.createObjectURL(file); au.src=curUrl;
   }
   au.volume=S.vol; S.pos=0;
+  clearTimeout(liveT); if(t.live) liveT=setTimeout(()=>{ if(au.readyState<3) liveFail(); },12000);
   setMedia();
-  try{ await au.play(); }catch(e){ S.playing=false; toast("Pulsa ▶ para reproducir"); }
+  try{ await au.play(); }catch(e){ if(e&&e.name==='NotAllowedError'){ S.playing=false; toast("Pulsa ▶ para reproducir"); } }
   render();
 }
 function playQueue(ids,start){
@@ -626,20 +779,35 @@ wheel.addEventListener('pointerup',e=>{
 wheel.addEventListener('pointercancel',()=>drag=null);
 wheel.addEventListener('wheel',e=>{ e.preventDefault(); scroll(e.deltaY>0?1:-1); },{passive:false});
 let lp=null, lpFired=false;
-$('center').addEventListener('pointerdown',()=>{
-  lpFired=false; clearTimeout(lp);
-  lp=setTimeout(()=>{
-    const t=cur(); if(!scr()||scr().key!=='np'||!t||!t.src) return;
-    lpFired=true; tick();
-    if(t.live) toast('Radio en vivo: no se puede guardar',2400); else push('options');
-  },650);
-});
-['pointerup','pointerleave','pointercancel'].forEach(ev=>$('center').addEventListener(ev,()=>clearTimeout(lp)));
-$('center').addEventListener('click',()=>{
-  if(lpFired){ lpFired=false; return; }
-  const f=scr(); if(f.key==='search'){ submitSearch(); return; }
-  if(f.key==='np'){ togglePlay(); tick(); return; }
-  const it=f.def.items[f.sel]; if(it&&it.go){ tick(); it.go(); }
+function bindSelect(el){
+  el.addEventListener('pointerdown',()=>{
+    lpFired=false; clearTimeout(lp);
+    lp=setTimeout(()=>{
+      const t=cur(); if(!scr()||scr().key!=='np'||!t||!t.src) return;
+      lpFired=true; tick();
+      if(t.live) toast('Radio en vivo: no se puede guardar',2400); else push('options');
+    },650);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(lp)));
+  el.addEventListener('click',()=>{
+    if(lpFired){ lpFired=false; return; }
+    const f=scr(); if(f.key==='search'){ submitSearch(); return; }
+    if(f.key==='np'){ togglePlay(); tick(); return; }
+    const it=f.def.items[f.sel]; if(it&&it.go){ tick(); it.go(); }
+  });
+}
+bindSelect($('center'));
+const volume=d=>{ S.vol=Math.min(1,Math.max(0,S.vol+d*.05)); au.volume=S.vol; savePrefs(); showVol(); tick(); };
+const ACT={
+  up:()=>scr().key==='np'?volume(1):scroll(-1),
+  down:()=>scr().key==='np'?volume(-1):scroll(1),
+  menu:()=>back(), prev:()=>skip(-1), next:()=>skip(1), play:()=>togglePlay(),
+  vup:()=>volume(1), vdn:()=>volume(-1)
+};
+document.querySelectorAll('.pad [data-act]').forEach(b=>{
+  const a=b.dataset.act;
+  if(a==='select') bindSelect(b);
+  else b.addEventListener('click',()=>{ if(!/^(up|down|vup|vdn)$/.test(a)) tick(); ACT[a](); });
 });
 document.addEventListener('keydown',e=>{
   if(e.target&&e.target.tagName==='INPUT') return;
@@ -654,6 +822,7 @@ document.addEventListener('keydown',e=>{
 try{ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
 
 /* ================== Inicio ================== */
+applySkin(S.skin);
 push('main');
 (async()=>{
   try{ await DB.open(); (await DB.allMeta()).forEach(m=>TRK.set(m.id,m)); render(); }catch(e){}
