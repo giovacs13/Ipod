@@ -146,6 +146,15 @@ body{
 }
 .center:active{transform:translate(-50%,-50%) scale(.975);box-shadow:0 0 0 1px var(--wedge),inset 0 calc(var(--w) * .01) calc(var(--w) * .02) rgba(0,0,0,.35)}
 .center:focus-visible,.wheel:focus-visible{outline:3px solid #2a6fb5;outline-offset:3px}
+.np{height:100%}
+.np .top{display:flex;gap:.7em;align-items:flex-start;min-height:0}
+.np .art{flex:0 0 40%;aspect-ratio:1;border-radius:4px;overflow:hidden;position:relative;background:linear-gradient(135deg,#d3e0e5,#9bb2bc);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.np .art::before{content:"\266A";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.6em;color:rgba(255,255,255,.88)}
+.np .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.np .meta{flex:1;min-width:0}
+.np .tt{overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.np .ar,.np .al{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.np .tip{color:var(--lcd-dim);font-size:.78em;margin-top:.5em}
 .srch{padding:.8em}
 .srch .hint{color:var(--lcd-dim);font-size:.85em;margin-bottom:.6em}
 .sbox{width:100%;font:inherit;padding:.5em .6em;border:1px solid var(--lcd-ink);border-radius:4px;background:#fff;color:var(--lcd-ink);
@@ -188,14 +197,18 @@ const $ = id => document.getElementById(id);
 const view=$('view'), titleEl=$('title');
 const TRK = new Map();          // id -> metadatos
 const MEM = new Map();          // id -> File (sesión actual)
+const MEMART = new Map();       // id -> carátula (Blob)
 const ONL = new Map();          // id -> pista en línea (radio / Audius)
 const COL = new Intl.Collator('es',{sensitivity:'base',numeric:true});
 
 const DB = {
   db:null, ok:false,
   open(){ return new Promise((res,rej)=>{
-    const r=indexedDB.open('ipod-local',1);
-    r.onupgradeneeded=()=>{ r.result.createObjectStore('meta',{keyPath:'id'}); r.result.createObjectStore('files'); };
+    const r=indexedDB.open('ipod-local',2);
+    r.onupgradeneeded=()=>{ const d=r.result;
+      if(!d.objectStoreNames.contains('meta')) d.createObjectStore('meta',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('files')) d.createObjectStore('files');
+      if(!d.objectStoreNames.contains('art')) d.createObjectStore('art'); };
     r.onsuccess=()=>{ this.db=r.result; this.ok=true; res(); };
     r.onerror=()=>rej(r.error);
   }); },
@@ -208,9 +221,12 @@ const DB = {
     t.oncomplete=res; t.onerror=t.onabort=()=>rej(t.error);
   }); },
   clear(){ return new Promise(res=>{
-    const t=this.db.transaction(['meta','files'],'readwrite');
-    t.objectStore('meta').clear(); t.objectStore('files').clear(); t.oncomplete=res; t.onerror=res;
-  }); }
+    const t=this.db.transaction(['meta','files','art'],'readwrite');
+    t.objectStore('meta').clear(); t.objectStore('files').clear(); t.objectStore('art').clear(); t.oncomplete=res; t.onerror=res;
+  }); },
+  putArt(id,blob){ return new Promise((res,rej)=>{ const t=this.db.transaction('art','readwrite'); t.objectStore('art').put(blob,id); t.oncomplete=res; t.onerror=t.onabort=()=>rej(t.error); }); },
+  getArt(id){ return this.req(this.db.transaction('art').objectStore('art').get(id)); },
+  putMeta(m){ return new Promise((res,rej)=>{ const t=this.db.transaction('meta','readwrite'); t.objectStore('meta').put(m); t.oncomplete=res; t.onerror=t.onabort=()=>rej(t.error); }); }
 };
 async function getFile(id){ return MEM.get(id) || (DB.ok ? await DB.getFile(id) : null); }
 
@@ -230,14 +246,39 @@ function readDuration(file){ return new Promise(res=>{
 }); }
 const txt = v => (v==null?'':String(v)).trim();
 
+function shrink(blob,max){ return new Promise(res=>{
+  const u=URL.createObjectURL(blob), im=new Image();
+  im.onload=()=>{ try{
+      const k=Math.min(1,max/Math.max(im.width,im.height)), c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(im.width*k)); c.height=Math.max(1,Math.round(im.height*k));
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      c.toBlob(b=>{ URL.revokeObjectURL(u); res(b); },'image/jpeg',.85);
+    }catch(e){ URL.revokeObjectURL(u); res(null); } };
+  im.onerror=()=>{ URL.revokeObjectURL(u); res(null); };
+  im.src=u;
+}); }
+async function artBlob(tags){
+  try{
+    const pic=tags&&tags.picture; if(!pic||!pic.data) return null;
+    return await shrink(new Blob([new Uint8Array(pic.data)],{type:pic.format||'image/jpeg'}),320);
+  }catch(e){ return null; }
+}
 async function importFiles(list){
   const files=list.filter(f=>(f.type||'').startsWith('audio/')||/\.(mp3|m4a|aac|flac|ogg|opus|wav)$/i.test(f.name));
   if(!files.length){ toast('No se encontró audio'); return; }
-  let added=0;
+  let added=0, updated=0;
   for(let i=0;i<files.length;i++){
     const f=files[i], id=f.name+'|'+f.size+'|'+f.lastModified;
     toast(`Importando ${i+1} de ${files.length}`,60000);
-    if(TRK.has(id)) continue;
+    if(TRK.has(id)){
+      const m=TRK.get(id);
+      if(m.hasArt===undefined){            // canción importada antes: intenta sacar la carátula
+        const ab=await artBlob(await readTags(f)); m.hasArt=!!ab;
+        if(ab){ MEMART.set(id,ab); updated++; if(DB.ok){ try{ await DB.putArt(id,ab); }catch(e){} } }
+        if(DB.ok){ try{ await DB.putMeta(m); }catch(e){} }
+      }
+      continue;
+    }
     const tg=await readTags(f), d=await readDuration(f);
     let base=f.name.replace(/\.[^.]+$/,''), title=txt(tg.title), artist=txt(tg.artist);
     if(!title){
@@ -246,11 +287,13 @@ async function importFiles(list){
     }
     const meta={ id, t:title, a:artist||'Artista desconocido', al:txt(tg.album)||'Álbum desconocido',
                  n:parseInt(txt(tg.track),10)||0, d };
+    const ab=await artBlob(tg); meta.hasArt=!!ab;
+    if(ab){ MEMART.set(id,ab); if(DB.ok){ try{ await DB.putArt(id,ab); }catch(e){} } }
     MEM.set(id,f);
     if(DB.ok){ try{ await DB.put(meta,f); }catch(e){ /* sin espacio: queda solo en esta sesión */ } }
     TRK.set(id,meta); added++;
   }
-  toast(added?`${added} canciones añadidas`:'Ya estaban en la biblioteca');
+  toast(added?`${added} canciones añadidas`:updated?'Carátulas actualizadas':'Ya estaban en la biblioteca');
   render();
 }
 const picker=document.createElement('input');
@@ -262,11 +305,11 @@ const pick=()=>picker.click();
 
 async function clearAll(){
   au.pause(); au.removeAttribute('src'); S.queue=[]; S.qi=-1; S.playing=false; S.pos=0;
-  TRK.clear(); MEM.clear(); if(DB.ok) await DB.clear();
+  TRK.clear(); MEM.clear(); MEMART.clear(); S.art=null; if(DB.ok) await DB.clear();
 }
 
 /* ================== Estado ================== */
-const S = { stack:[], queue:[], qi:-1, playing:false, pos:0, vol:.7, theme:'white', armed:0 };
+const S = { stack:[], queue:[], qi:-1, playing:false, pos:0, vol:.7, theme:'white', armed:0, art:null };
 const ROWS = 7;
 try{
   const sv=JSON.parse(localStorage.getItem('ipod-prefs')||'{}');
@@ -325,6 +368,10 @@ const SCREENS = {
   ]}),
   search:a=>({title:a.kind==='radio'?'Buscar emisora':'Buscar música', search:a}),
   results:a=>{ const ids=a.tracks.map(t=>t.id); return {title:a.title, items:a.tracks.map((t,k)=>({label:t.t, go:()=>playQueue(ids,k)}))}; },
+  options:()=>({title:"Guardar", items:[
+    {label:"En la biblioteca", go:()=>saveToLibrary()},
+    {label:"Archivo en el teléfono", go:()=>saveToPhone()}
+  ]}),
   np:()=>({title:"Reproduciendo", np:true})
 };
 
@@ -337,24 +384,27 @@ async function getJSON(url,ms=9000){
   try{ const r=await fetch(url,{signal:c.signal}); if(!r.ok) throw new Error(r.status); return await r.json(); }
   finally{ clearTimeout(to); }
 }
-const RB=['https://de1.api.radio-browser.info','https://nl1.api.radio-browser.info','https://at1.api.radio-browser.info'];
-async function rb(path){ for(const h of RB){ try{ return await getJSON(h+path); }catch(e){} } throw new Error('radio'); }
+const RB=['https://de2.api.radio-browser.info','https://fi1.api.radio-browser.info','https://de1.api.radio-browser.info',
+  'https://nl1.api.radio-browser.info','https://at1.api.radio-browser.info','https://all.api.radio-browser.info'];
+async function rb(path){ return Promise.any(RB.map(h=>getJSON(h+path,7000))); }   // gana el primer servidor que responda
+const httpsOK=s=>/^https:\/\//i.test(s.url_resolved||'');                        // http se bloquea en páginas https
 const AU='https://api.audius.co/v1';
 const radioTrack=s=>({ id:'rd:'+s.stationuuid, t:(s.name||'Emisora').trim(),
   a:[s.country,(s.tags||'').split(',')[0]].filter(Boolean).join(' · ')||'Radio', al:'En vivo', live:true, d:0,
-  src:s.url_resolved||s.url });
+  art:/^https:\/\//i.test(s.favicon||'')?s.favicon:'', src:s.url_resolved||s.url });
 const audiusTrack=t=>({ id:'au:'+t.id, t:t.title||'Sin título', a:(t.user&&t.user.name)||'Audius', al:'Audius',
-  d:t.duration||0, src:`${AU}/tracks/${t.id}/stream?app_name=ipod` });
+  d:t.duration||0, art:(t.artwork&&(t.artwork['480x480']||t.artwork['150x150']||t.artwork['1000x1000']))||'',
+  src:`${AU}/tracks/${t.id}/stream?app_name=ipod` });
 async function runOnline(kind,q){
   toast('Buscando…',15000);
   try{
     let tracks=[], title='';
     if(kind==='radio-pop'){
-      const j=await rb('/json/stations/search?language=spanish&order=clickcount&reverse=true&hidebroken=true&limit=40');
-      tracks=j.map(radioTrack); title='Radio populares';
+      const j=await rb('/json/stations/search?language=spanish&order=clickcount&reverse=true&hidebroken=true&limit=150');
+      tracks=j.filter(httpsOK).slice(0,40).map(radioTrack); title='Radio populares';
     } else if(kind==='radio'){
-      const j=await rb('/json/stations/search?name='+encodeURIComponent(q)+'&order=clickcount&reverse=true&hidebroken=true&limit=40');
-      tracks=j.map(radioTrack); title=q;
+      const j=await rb('/json/stations/search?name='+encodeURIComponent(q)+'&order=clickcount&reverse=true&hidebroken=true&limit=150');
+      tracks=j.filter(httpsOK).slice(0,40).map(radioTrack); title=q;
     } else if(kind==='audius-trend'){
       const j=await getJSON(`${AU}/tracks/trending?limit=30&app_name=ipod`);
       tracks=(j.data||[]).filter(t=>t.is_streamable!==false).map(audiusTrack); title='Audius tendencias';
@@ -367,7 +417,38 @@ async function runOnline(kind,q){
     $('toast').classList.remove('on');
     tracks.forEach(t=>ONL.set(t.id,t));
     push('results',{title,tracks});
-  }catch(e){ toast('Sin conexión o bloqueado',2400); }
+  }catch(e){ toast(String(kind).startsWith('radio')?'No hay conexión con el directorio de radio':'Sin conexión o bloqueado',2600); }
+}
+async function fetchBlob(t){
+  const r=await fetch(t.src); if(!r.ok) throw new Error(r.status);
+  return await r.blob();
+}
+const extOf=b=>/mp4|aac|m4a/.test(b.type)?'m4a':/ogg/.test(b.type)?'ogg':/wav/.test(b.type)?'wav':'mp3';
+const safeName=n=>n.replace(/[\\/:*?"<>|]+/g,' ').trim()||'cancion';
+async function saveToLibrary(){
+  const t=cur(); if(!t||t.live||!t.src){ toast('Solo canciones en línea'); return; }
+  const id='dl|'+t.id;
+  if(TRK.has(id)){ toast('Ya está en tu biblioteca'); back(); return; }
+  toast('Descargando…',60000);
+  try{
+    const blob=await fetchBlob(t);
+    const file=new File([blob],safeName(t.t)+'.'+extOf(blob),{type:blob.type||'audio/mpeg'});
+    const meta={id,t:t.t,a:t.a,al:t.al,n:0,d:t.d,hasArt:false};
+    if(t.art){ try{ const ab=await shrink(await (await fetch(t.art)).blob(),320);
+      if(ab){ meta.hasArt=true; MEMART.set(id,ab); if(DB.ok){ try{ await DB.putArt(id,ab); }catch(e){} } } }catch(e){} }
+    MEM.set(id,file);
+    if(DB.ok){ try{ await DB.put(meta,file); }catch(e){} }
+    TRK.set(id,meta); toast('Guardada en tu biblioteca',2200); back();
+  }catch(e){ toast('No se pudo descargar',2600); }
+}
+async function saveToPhone(){
+  const t=cur(); if(!t||t.live||!t.src){ toast('Solo canciones en línea'); return; }
+  toast('Descargando…',60000);
+  try{
+    const blob=await fetchBlob(t), u=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=u; a.download=safeName(t.a+' - '+t.t)+'.'+extOf(blob); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),60000); toast('Guardada en Descargas',2200); back();
+  }catch(e){ toast('No se pudo descargar',2600); }
 }
 function renderSearch(a){
   view.innerHTML=`<div class="srch"><div class="hint">Escribe y pulsa Enter</div>
@@ -409,9 +490,10 @@ const dur = () => (isFinite(au.duration)&&au.duration>0) ? au.duration : (cur()?
 function renderNP(){
   const t=cur();
   if(!t){ view.innerHTML='<div class="empty">Nada en reproducción</div>'; return; }
-  view.innerHTML=`<div class="np"><div class="meta"><div class="tt">${esc(t.t)}</div><div class="ar">${esc(t.a)}</div><div class="al">${esc(t.al)}</div></div>
+  view.innerHTML=`<div class="np"><div class="top"><div class="art">${S.art?`<img src="${esc(S.art)}" alt="" referrerpolicy="no-referrer">`:''}</div><div class="meta"><div class="tt">${esc(t.t)}</div><div class="ar">${esc(t.a)}</div><div class="al">${esc(t.al)}</div>${t.src&&!t.live?'<div class="tip">Mantén el botón central para guardar</div>':''}</div></div>
   <div><div class="prog"><i id="npFill"></i></div>
   <div class="times"><span id="npPos"></span><span id="npRem"></span></div></div></div>`;
+  const im=view.querySelector('.art img'); if(im) im.addEventListener('error',()=>im.remove());
   updateProg();
 }
 function updateProg(){
@@ -434,6 +516,7 @@ au.addEventListener('ended',()=>{
 });
 async function loadCurrent(){
   const t=cur(); if(!t) return;
+  S.art=null; loadArt();
   if(t.src){
     if(curUrl){ URL.revokeObjectURL(curUrl); curUrl=null; }
     au.src=t.src;
@@ -462,10 +545,24 @@ function skip(d){
   if(d<0 && au.currentTime>3){ au.currentTime=0; return; }
   S.qi=(S.qi+d+S.queue.length)%S.queue.length; loadCurrent();
 }
+let artObjUrl=null;
+async function loadArt(){
+  const t=cur(); if(!t) return;
+  const id=t.id;
+  if(artObjUrl){ URL.revokeObjectURL(artObjUrl); artObjUrl=null; }
+  let url=null;
+  if(t.art) url=t.art;
+  else if(t.hasArt){
+    try{ const b=MEMART.get(id)||(DB.ok?await DB.getArt(id):null); if(b){ url=URL.createObjectURL(b); artObjUrl=url; } }catch(e){}
+  }
+  const now=cur();
+  if(!now||now.id!==id){ if(url&&url.startsWith('blob:')){ URL.revokeObjectURL(url); if(artObjUrl===url) artObjUrl=null; } return; }
+  S.art=url; setMedia(); render();
+}
 function setMedia(){
   try{
     const t=cur(); if(!t||!('mediaSession' in navigator)) return;
-    navigator.mediaSession.metadata=new MediaMetadata({title:t.t,artist:t.a,album:t.al});
+    navigator.mediaSession.metadata=new MediaMetadata({title:t.t,artist:t.a,album:t.al,artwork:S.art?[{src:S.art,sizes:'512x512'}]:[]});
   }catch(e){}
 }
 try{
@@ -528,7 +625,18 @@ wheel.addEventListener('pointerup',e=>{
 });
 wheel.addEventListener('pointercancel',()=>drag=null);
 wheel.addEventListener('wheel',e=>{ e.preventDefault(); scroll(e.deltaY>0?1:-1); },{passive:false});
+let lp=null, lpFired=false;
+$('center').addEventListener('pointerdown',()=>{
+  lpFired=false; clearTimeout(lp);
+  lp=setTimeout(()=>{
+    const t=cur(); if(!scr()||scr().key!=='np'||!t||!t.src) return;
+    lpFired=true; tick();
+    if(t.live) toast('Radio en vivo: no se puede guardar',2400); else push('options');
+  },650);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>$('center').addEventListener(ev,()=>clearTimeout(lp)));
 $('center').addEventListener('click',()=>{
+  if(lpFired){ lpFired=false; return; }
   const f=scr(); if(f.key==='search'){ submitSearch(); return; }
   if(f.key==='np'){ togglePlay(); tick(); return; }
   const it=f.def.items[f.sel]; if(it&&it.go){ tick(); it.go(); }
